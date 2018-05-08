@@ -25,12 +25,35 @@ static size_t body_cb(char *ptr, size_t size, size_t nmemb, void *userdata) {
   return nmemb;
 }
 
+static std::string make_url(
+    const std::string &baseurl, const std::string &path,
+    const std::map<std::string, std::string> &query) noexcept {
+  // baseurl ex: https://orchestrate.ooni.io
+  std::stringstream ss;
+  ss << baseurl << "/api/v1" << path;
+  if (query.empty()) {
+    return ss.str();
+  }
+
+  ss << "?";
+  std::vector<std::string> parts;
+  for (auto &kv : query) {
+    std::stringstream ss;
+    ss << kv.first << "=" << kv.second;
+    parts.push_back(ss.str());
+  }
+  std::copy(parts.begin(), parts.end(),
+            std::ostream_iterator<std::string>(ss, "&"));
+  // XXX this is a bit sketchy
+  return ss.str().substr(0, ss.str().size() - 1);
+}
+
 namespace mk {
 namespace wac {
 
 bool OrchestrateClient::get_urls(const std::string &country_code,
                                  const std::vector<std::string> &category_codes,
-                                 int limit,
+                                 size_t limit,
                                  std::vector<std::string> *urls) noexcept {
   if (urls == nullptr) {
     return false;
@@ -47,11 +70,23 @@ bool OrchestrateClient::get_urls(const std::string &country_code,
   }
   std::clog << "cURL initialized" << std::endl;
 
-  // XXX compose URL with the arguments
-  // country_code, category_codes
-  constexpr auto url = "https://events.proteus.test.ooni.io/api/v1/urls";
+  std::map<std::string, std::string> query;
+  if (!country_code.empty()) {
+    query["country_code"] = country_code;
+  }
+  if (!category_codes.empty()) {
+    std::stringstream ss;
+    std::copy(category_codes.begin(), category_codes.end(),
+              std::ostream_iterator<std::string>(ss, ","));
+    // XXX this is a bit sketchy
+    query["category_codes"] = ss.str().substr(0, ss.str().size() - 1);
+  }
+  if (limit > 0) {
+    query["limit"] = std::to_string(limit);
+  }
+  auto url = make_url("https://events.proteus.test.ooni.io", "/urls", query);
 
-  if (curl_easy_setopt(curl, CURLOPT_URL, url) != CURLE_OK) {
+  if (curl_easy_setopt(curl, CURLOPT_URL, url.c_str()) != CURLE_OK) {
     std::clog << "fatal: curl_easy_setopt(CURLOPT_URL, ...) failed"
               << std::endl;
     curl_easy_cleanup(curl);

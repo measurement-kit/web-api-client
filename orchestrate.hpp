@@ -27,7 +27,7 @@ class OrchestrateClient {
   OrchestrateSettings settings;
 
   bool get_urls(const std::string &country_code,
-                const std::vector<std::string> &category_codes, int limit,
+                const std::vector<std::string> &category_codes, size_t limit,
                 std::vector<std::string> *urls) noexcept;
 };
 

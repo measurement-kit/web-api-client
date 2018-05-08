@@ -11,8 +11,8 @@ using namespace mk::wac;
 int main() {
   std::vector<std::string> urls;
   OrchestrateClient client;
-  if (!client.get_urls("IT", {"HUMR", "ENV"}, 100, &urls)) {
-    return 1; // error already printed
+  if (!client.get_urls("IT", {"HUMR", "ENV"}, 10, &urls)) {
+    return 1;  // error already printed
   }
   for (auto url : urls) {
     std::clog << url << std::endl;
