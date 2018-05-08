@@ -15,3 +15,10 @@ cmake -GNinja .
 ninja -v
 ctest -a -j8
 ```
+### Msys2
+
+```
+cmake -G'Unix Makefiles' .
+make
+ctest -a -j8
+```

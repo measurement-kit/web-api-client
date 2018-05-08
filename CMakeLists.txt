@@ -10,7 +10,7 @@ file(
   SHA256=fbdfec4b4cf63b3b565d09f87e6c3c183bdd45c5be1864d3fcb338f6f02c1733
   TLS_VERIFY ON SHOW_PROGRESS)
 
-if("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
+if (${MSVC})
   if("${CMAKE_SIZEOF_VOID_P}" EQUAL 8)
     set(LIBNDT_CURL_ARCH "amd64")
     set(LIBNDT_CURL_BASEURL "https://github.com/measurement-kit/prebuilt/releases/download")
