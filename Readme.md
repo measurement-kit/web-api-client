@@ -22,3 +22,8 @@ cmake -G'Unix Makefiles' .
 make
 ctest -a -j8
 ```
+
+### Windows
+
+Open `CMakeLists.txt` with Visual Studio. Make sure you select the
+`x64-Release` build, since it's the only supported build for now.

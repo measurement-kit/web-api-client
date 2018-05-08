@@ -76,6 +76,7 @@ add_library(
 )
 target_include_directories(
   web-api-client PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
+                        ${CURL_INCLUDE_DIRS}
 )
 install(
   FILES
@@ -104,11 +105,6 @@ enable_testing()
 if(${BUILD_TESTING}) # is a standard name in CMake-land
   if(${CURL_FOUND})
     add_executable(example_orchestrate example_orchestrate.cpp)
-    target_include_directories(
-      example_orchestrate
-      PUBLIC
-      ${CURL_INCLUDE_DIRS}
-    )
     target_link_libraries(example_orchestrate web-api-client ${CURL_LIBRARIES})
     add_test(
       NAME orchestrate_test
