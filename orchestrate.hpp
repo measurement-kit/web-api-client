@@ -18,8 +18,9 @@ enum class BackendType { ONION, HTTPS, DOMAIN_FRONTED };
 class OrchestrateSettings {
  public:
   std::string address;
-  BackendType type;
+  BackendType type = BackendType::HTTPS;
   std::string front;
+  std::string socks_config;
 };
 
 class OrchestrateClient {

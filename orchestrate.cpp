@@ -51,6 +51,86 @@ static std::string make_url(
 namespace mk {
 namespace wac {
 
+static CURL *setup_curl(OrchestrateSettings settings, const std::string &path,
+                        const std::map<std::string, std::string> &query,
+                        std::stringstream *response_body) noexcept {
+  CURL *curl = curl_easy_init();
+  if (curl == nullptr) {
+    std::clog << "fatal: curl_easy_init() failed" << std::endl;
+    return nullptr;
+  }
+  std::clog << "cURL initialized" << std::endl;
+
+  std::string url;
+  switch (settings.type) {
+    case BackendType::HTTPS: {
+      std::stringstream ss;
+      ss << "https://" << settings.address;
+      url = make_url(ss.str(), path, query);
+      break;
+    }
+    case BackendType::ONION: {
+      if (settings.socks_config.empty()) {
+        return nullptr;
+      }
+      std::stringstream ss;
+      ss << "http://" << settings.address;
+      url = make_url(ss.str(), path, query);
+      break;
+    }
+    case BackendType::DOMAIN_FRONTED: {
+      std::stringstream ss;
+      ss << "https://" << settings.front;
+      url = make_url(ss.str(), path, query);
+
+      struct curl_slist *list = NULL;
+      std::stringstream header_ss;
+      header_ss << "Host: " << settings.address;
+      list = curl_slist_append(list, header_ss.str().c_str());
+      curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
+      // XXX curl_slist_free_all(list); /* free the list again */
+      break;
+    }
+  }
+  curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+
+  if (curl_easy_setopt(curl, CURLOPT_URL, url.c_str()) != CURLE_OK) {
+    std::clog << "fatal: curl_easy_setopt(CURLOPT_URL, ...) failed"
+              << std::endl;
+    curl_easy_cleanup(curl);
+    return nullptr;
+  }
+  std::clog << "using URL: " << url << std::endl;
+
+  if (!settings.socks_config.empty()) {
+    if (curl_easy_setopt(curl, CURLOPT_PROXY, settings.socks_config.c_str()) !=
+        CURLE_OK) {
+      curl_easy_cleanup(curl);
+      return nullptr;
+    }
+  }
+
+  if (curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, body_cb) != CURLE_OK) {
+    std::clog << "fatal: curl_easy_setopt(CURLOPT_WRITEFUNCTION, ...) failed"
+              << std::endl;
+    curl_easy_cleanup(curl);
+    return nullptr;
+  }
+  std::clog << "configured write callback" << std::endl;
+  if (curl_easy_setopt(curl, CURLOPT_WRITEDATA, response_body) != CURLE_OK) {
+    std::clog << "fatal: curl_easy_setopt(CURLOPT_WRITEDATA, ...) failed"
+              << std::endl;
+    curl_easy_cleanup(curl);
+    return nullptr;
+  }
+
+  // XXX should this be the default?
+  // XXX check return too.
+  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+  return curl;
+}
+
 bool OrchestrateClient::get_urls(const std::string &country_code,
                                  const std::vector<std::string> &category_codes,
                                  size_t limit,
@@ -58,17 +138,6 @@ bool OrchestrateClient::get_urls(const std::string &country_code,
   if (urls == nullptr) {
     return false;
   }
-
-  // Ignore unused arguments
-  (void)country_code, (void)category_codes, (void)limit;
-
-  std::stringstream response_body;
-  CURL *curl = curl_easy_init();
-  if (curl == nullptr) {
-    std::clog << "fatal: curl_easy_init() failed" << std::endl;
-    return false;
-  }
-  std::clog << "cURL initialized" << std::endl;
 
   std::map<std::string, std::string> query;
   if (!country_code.empty()) {
@@ -84,28 +153,13 @@ bool OrchestrateClient::get_urls(const std::string &country_code,
   if (limit > 0) {
     query["limit"] = std::to_string(limit);
   }
-  auto url = make_url("https://events.proteus.test.ooni.io", "/urls", query);
 
-  if (curl_easy_setopt(curl, CURLOPT_URL, url.c_str()) != CURLE_OK) {
-    std::clog << "fatal: curl_easy_setopt(CURLOPT_URL, ...) failed"
-              << std::endl;
-    curl_easy_cleanup(curl);
+  std::stringstream response_body;
+  CURL *curl = setup_curl(settings, "/urls", query, &response_body);
+  if (curl == nullptr) {
     return false;
   }
-  std::clog << "using URL: " << url << std::endl;
-  if (curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, body_cb) != CURLE_OK) {
-    std::clog << "fatal: curl_easy_setopt(CURLOPT_WRITEFUNCTION, ...) failed"
-              << std::endl;
-    curl_easy_cleanup(curl);
-    return false;
-  }
-  std::clog << "configured write callback" << std::endl;
-  if (curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_body) != CURLE_OK) {
-    std::clog << "fatal: curl_easy_setopt(CURLOPT_WRITEDATA, ...) failed"
-              << std::endl;
-    curl_easy_cleanup(curl);
-    return false;
-  }
+
   std::clog << "configured write callback context" << std::endl;
   std::clog << "cURL-performing HTTP request..." << std::endl;
   auto rv = curl_easy_perform(curl);

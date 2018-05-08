@@ -53,7 +53,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if("${UNIX}" OR "${MINGW}")
-  set(LIBNDT_FLAGS "-Wall -Wextra -Werror")
+  set(LIBNDT_FLAGS "-Wall -Wextra -Werror -fsanitize=address")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${LIBNDT_FLAGS} -Wmissing-prototypes")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LIBNDT_FLAGS}")
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
