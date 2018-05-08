@@ -1,1 +1,13 @@
-/a.out
+/build.ninja
+/CMakeCache.txt
+/CMakeFiles/
+/cmake_install.cmake
+/CTestTestfile.cmake
+/example_orchestrate
+/json.hpp
+/libweb-api-client.a
+/.ninja_deps
+/.ninja_log
+/rules.ninja
+*.swp
+/Testing/

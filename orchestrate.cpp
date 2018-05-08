@@ -1,10 +1,15 @@
+// Part of Measurement Kit <https://measurement-kit.github.io/>.
+// Measurement Kit is free software under the BSD license. See AUTHORS
+// and LICENSE for more information on the copying conditions.
+
 #include "orchestrate.hpp"
 
 #include <iostream>
 #include <sstream>
 
 #include <curl/curl.h>
-#include <nlohmann/json.hpp>
+
+#include "json.hpp"
 
 static size_t body_cb(char *ptr, size_t size, size_t nmemb, void *userdata) {
   if (nmemb <= 0) {
@@ -25,8 +30,15 @@ namespace wac {
 
 bool OrchestrateClient::get_urls(const std::string &country_code,
                                  const std::vector<std::string> &category_codes,
-                                 const int limit,
+                                 int limit,
                                  std::vector<std::string> *urls) noexcept {
+  if (urls == nullptr) {
+    return false;
+  }
+
+  // Ignore unused arguments
+  (void)country_code, (void)category_codes, (void)limit;
+
   std::stringstream response_body;
   CURL *curl = curl_easy_init();
   if (curl == nullptr) {
@@ -70,7 +82,9 @@ bool OrchestrateClient::get_urls(const std::string &country_code,
     return false;
   }
   curl_easy_cleanup(curl);
+
   std::clog << "got this response body: " << response_body.str() << std::endl;
+
   nlohmann::json json;
   try {
     json = nlohmann::json::parse(response_body.str());
@@ -80,9 +94,15 @@ bool OrchestrateClient::get_urls(const std::string &country_code,
   }
   std::clog << "successfully parsed body as JSON" << std::endl;
 
-  for (auto result : json["results"]) {
-    urls->push_back(result["url"]);
+  try {
+    for (auto result : json["results"]) {
+      urls->push_back(result["url"]);
+    }
+  } catch (const nlohmann::json::exception &) {
+    std::clog << "fatal: JSON processing failed" << std::endl;
+    return false;
   }
+
   return true;
 }
 

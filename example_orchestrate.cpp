@@ -1,5 +1,7 @@
-// clang++ -Wall -Wextra -std=c++11 -I. orchestrate.cpp example_orchestrate.cpp
-// -lcurl
+// Part of Measurement Kit <https://measurement-kit.github.io/>.
+// Measurement Kit is free software under the BSD license. See AUTHORS
+// and LICENSE for more information on the copying conditions.
+
 #include "orchestrate.hpp"
 
 #include <iostream>
@@ -9,9 +11,8 @@ using namespace mk::wac;
 int main() {
   std::vector<std::string> urls;
   OrchestrateClient client;
-  if (client.get_urls("IT", {"HUMR", "ENV"}, 100, &urls) != true) {
-    std::clog << "Failed to get_urls" << std::endl;
-    return 1;
+  if (!client.get_urls("IT", {"HUMR", "ENV"}, 100, &urls)) {
+    return 1; // error already printed
   }
   for (auto url : urls) {
     std::clog << url << std::endl;
