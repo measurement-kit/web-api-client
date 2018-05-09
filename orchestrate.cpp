@@ -51,10 +51,12 @@ static std::string make_url(
 namespace mk {
 namespace wac {
 
-static CURL *setup_curl(OrchestrateSettings settings, const std::string &path,
+static CURL *setup_curl(OrchestrateClient *client, const std::string &path,
                         const std::map<std::string, std::string> &query,
                         std::stringstream *response_body) noexcept {
-  CURL *curl = curl_easy_init();
+  const OrchestrateSettings &settings = client->settings;
+
+  CURL *curl = client->curl_easy_init();
   if (curl == nullptr) {
     std::clog << "fatal: curl_easy_init() failed" << std::endl;
     return nullptr;
@@ -66,6 +68,12 @@ static CURL *setup_curl(OrchestrateSettings settings, const std::string &path,
     case BackendType::HTTPS: {
       std::stringstream ss;
       ss << "https://" << settings.address;
+      url = make_url(ss.str(), path, query);
+      break;
+    }
+    case BackendType::HTTP: {
+      std::stringstream ss;
+      ss << "http://" << settings.address;
       url = make_url(ss.str(), path, query);
       break;
     }
@@ -87,8 +95,12 @@ static CURL *setup_curl(OrchestrateSettings settings, const std::string &path,
       std::stringstream header_ss;
       header_ss << "Host: " << settings.address;
       list = curl_slist_append(list, header_ss.str().c_str());
+      if (list == nullptr) {
+        curl_easy_cleanup(curl);
+        return nullptr;
+      }
       curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
-      // XXX curl_slist_free_all(list); /* free the list again */
+      curl_slist_free_all(list);
       break;
     }
   }
@@ -125,8 +137,12 @@ static CURL *setup_curl(OrchestrateSettings settings, const std::string &path,
   }
 
   // XXX should this be the default?
-  // XXX check return too.
-  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+  if (curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L) != CURLE_OK) {
+    std::clog << "fatal: curl_easy_setopt(CURLOPT_FOLLOWLOCATION, ...) failed"
+              << std::endl;
+    curl_easy_cleanup(curl);
+    return nullptr;
+  }
 
   return curl;
 }
@@ -155,7 +171,7 @@ bool OrchestrateClient::get_urls(const std::string &country_code,
   }
 
   std::stringstream response_body;
-  CURL *curl = setup_curl(settings, "/urls", query, &response_body);
+  CURL *curl = setup_curl(this, "/urls", query, &response_body);
   if (curl == nullptr) {
     return false;
   }
@@ -194,6 +210,10 @@ bool OrchestrateClient::get_urls(const std::string &country_code,
 
   return true;
 }
+
+CURL *OrchestrateClient::curl_easy_init() noexcept {
+  return ::curl_easy_init();
+};
 
 }  // namespace wac
 }  // namespace mk

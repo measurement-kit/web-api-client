@@ -10,10 +10,12 @@
 #include <string>
 #include <vector>
 
+#include <curl/curl.h>
+
 namespace mk {
 namespace wac {
 
-enum class BackendType { ONION, HTTPS, DOMAIN_FRONTED };
+enum class BackendType { ONION, HTTP, HTTPS, DOMAIN_FRONTED };
 
 class OrchestrateSettings {
  public:
@@ -30,6 +32,14 @@ class OrchestrateClient {
   bool get_urls(const std::string &country_code,
                 const std::vector<std::string> &category_codes, size_t limit,
                 std::vector<std::string> *urls) noexcept;
+
+  /* overridable for testing */
+  virtual CURL *curl_easy_init() noexcept;
+  /*
+  curl_easy_setopt
+  curl_slist_append
+  curl_easy_perform
+  */
 };
 
 }  // namespace wac

@@ -16,9 +16,12 @@ int main() {
   client.settings.front = "a0.awsstatic.com";
   client.settings.type = BackendType::DOMAIN_FRONTED;
   */
+  /*
   client.settings.address = "65as4puv7ecde5q2.onion";
   client.settings.type = BackendType::ONION;
   client.settings.socks_config = "socks5h://127.0.0.1:9050";
+  */
+  client.settings.address = "events.proteus.test.ooni.io";
   if (!client.get_urls("IT", {"HUMR", "ENV"}, 10, &urls)) {
     return 1;  // error already printed
   }
